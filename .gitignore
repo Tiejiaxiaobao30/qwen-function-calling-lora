@@ -1,0 +1,15 @@
+# Generated artifacts -- do NOT commit.
+# outputs/ holds the xLAM data splits (GATED, research-only: redistributing them
+# would violate the dataset terms), plus checkpoints and the adapter. The pipeline
+# regenerates everything from the gated source.
+outputs/
+/content/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Notebooks
+.ipynb_checkpoints/

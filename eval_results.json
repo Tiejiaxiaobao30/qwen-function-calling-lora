@@ -1,0 +1,17 @@
+{
+  "base": {
+    "json_valid": 0.7454909819639278,
+    "name_acc": 0.4348697394789579,
+    "exact_match": 0.3106212424849699
+  },
+  "tuned": {
+    "json_valid": 0.994,
+    "name_acc": 0.984,
+    "exact_match": 0.788
+  },
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "adapter": "step-939 (final)",
+  "test_n": 499,
+  "decoding": "greedy",
+  "metric": "BFCL-style AST match"
+}

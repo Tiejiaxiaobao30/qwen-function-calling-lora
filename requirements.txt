@@ -1,0 +1,13 @@
+# Exact versions this project was validated against (Aug 2026).
+# On Colab, `pip install -r requirements.txt` then RESTART the runtime before importing,
+# so the new huggingface_hub is picked up cleanly.
+transformers==5.12.1
+peft==0.19.1
+trl==1.7.1
+bitsandbytes==0.49.2
+accelerate==1.14.0
+datasets==4.0.0
+huggingface_hub==1.20.1
+numpy
+# torch is provided by the runtime (Colab / your CUDA install). If installing from
+# scratch, add the torch build that matches your CUDA version.
