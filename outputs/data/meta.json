@@ -1,0 +1,9 @@
+{
+  "base_model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "dataset": "Salesforce/xlam-function-calling-60k",
+  "max_len": 2048,
+  "seed": 42,
+  "n_train": 5000,
+  "n_val": 500,
+  "n_test": 500
+}

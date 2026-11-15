@@ -1,0 +1,151 @@
+{
+  "test_n": 500,
+  "strict_exact_match": 0.774,
+  "lenient_exact_match": 0.778,
+  "type_coercion_gap": 0.0040000000000000036,
+  "total_misses": 113,
+  "breakdown": {
+    "wrong_arg_keys": 46,
+    "wrong_arg_values": 61,
+    "wrong_function_name": 2,
+    "invalid_json": 4
+  },
+  "sample_misses": [
+    {
+      "query": "Search for eBook files about 'quantum physics' and start from the 10th result.",
+      "target": [
+        {
+          "name": "pursuit",
+          "arguments": {
+            "q": "quantum physics",
+            "type": "ebook",
+            "start": 10
+          }
+        }
+      ],
+      "pred": "[{\"name\": \"pursuit\", \"arguments\": {\"q\": \"quantum physics\", \"filetype\": \"ebook\", \"start\": 10}}]",
+      "category": "wrong_arg_keys"
+    },
+    {
+      "query": "What will be the population of New York City in 5 years, assuming an annual growth rate of",
+      "target": [
+        {
+          "name": "project_population",
+          "arguments": {
+            "current_pop": 8500000,
+            "num_years": 5,
+            "annual_growth": 2
+          }
+        },
+        {
+          "name": "get_ip_location",
+          "arguments": {
+            "ip": "8.8.8.8"
+          }
+        }
+      ],
+      "pred": "[{\"name\": \"project_population\", \"arguments\": {\"current_pop\": 8.74e6, \"num_years\": 5, \"annual_growth\": 2}}, {\"name\": \"get_ip_location\", \"arguments\": {\"ip\": \"8.8.",
+      "category": "wrong_arg_values"
+    },
+    {
+      "query": "Retrieve a full list of expired user details from the OnlyFans API with sorting order 'asc",
+      "target": [
+        {
+          "name": "list",
+          "arguments": {
+            "sort": "asc",
+            "signend": "",
+            "signstart": "",
+            "apptoken": "",
+            "xbc": "",
+            "timezone": "",
+            "useragent": "",
+            "field": "",
+            "offset": "",
+            "sess": "abc123",
+            "auth_id": ""
+          }
+        },
+        {
+          "name": "get_user_info",
+          "arguments": {
+            "is_id": 35790
+          }
+        }
+      ],
+      "pred": "[{\"name\": \"list\", \"arguments\": {\"sort\": \"asc\", \"sess\": \"abc123\"}}, {\"name\": \"get_user_info\", \"arguments\": {\"is_id\": 35790}}]",
+      "category": "wrong_arg_keys"
+    },
+    {
+      "query": "Calculate the annual percentage yield for an investment of $20,000 at an annual interest r",
+      "target": [
+        {
+          "name": "get_calculate_investment",
+          "arguments": {
+            "rate": 7,
+            "principal": 20000,
+            "time": 60,
+            "compounding": "monthly",
+            "in_currency": "USD",
+            "format": "yes",
+            "to_currency": "USD"
+          }
+        }
+      ],
+      "pred": "[{\"name\": \"get_calculate_investment\", \"arguments\": {\"rate\": 7, \"principal\": 20000, \"time\": 60, \"compounding\": \"monthly\"}}]",
+      "category": "wrong_arg_keys"
+    },
+    {
+      "query": "What are the FAQs for the election page 5? I also want to know the opening movies in Russi",
+      "target": [
+        {
+          "name": "getfaqs",
+          "arguments": {
+            "page": "5"
+          }
+        },
+        {
+          "name": "movies_get_opening",
+          "arguments": {
+            "countryid": "rus"
+          }
+        },
+        {
+          "name": "vivanews_search",
+          "arguments": {
+            "page": 15,
+            "keyword": "sports"
+          }
+        }
+      ],
+      "pred": "[{\"name\": \"getfaqs\", \"arguments\": {\"page\": 5}}, {\"name\": \"movies_get_opening\", \"arguments\": {\"countryid\": \"ru\"}}, {\"name\": \"vivanews_search\", \"arguments\": {\"pag",
+      "category": "wrong_arg_values"
+    },
+    {
+      "query": "Fetch the most recent 20 tweets of the user with the ID '123456789'. Also, retrieve the fi",
+      "target": [
+        {
+          "name": "tweets_by_userid",
+          "arguments": {
+            "userid": "123456789"
+          }
+        },
+        {
+          "name": "list_comments",
+          "arguments": {
+            "aweme_id": "abcdefg",
+            "count": 10
+          }
+        },
+        {
+          "name": "telegram_channel_info",
+          "arguments": {
+            "channel": "@examplechannel"
+          }
+        }
+      ],
+      "pred": "[{\"name\": \"tweets_by_userid\", \"arguments\": {\"userid\": \"123456789\"}}, {\"name\": \"list_comments\", \"arguments\": {\"aweme_id\": \"abcdefg\"}}, {\"name\": \"telegram_channel",
+      "category": "wrong_arg_keys"
+    }
+  ]
+}

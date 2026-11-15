@@ -1,15 +1,22 @@
-# Generated artifacts -- do NOT commit.
-# outputs/ holds the xLAM data splits (GATED, research-only: redistributing them
-# would violate the dataset terms), plus checkpoints and the adapter. The pipeline
-# regenerates everything from the gated source.
-outputs/
+# Verified outputs are versioned; intermediate caches stay local.
+outputs/**/cache-*.arrow
+outputs/data/*/*.arrow
+outputs/**/cache-*.arrow.lock
+outputs/**/tmp*/
+outputs/**/runs/
 /content/
-
-# Python
+.cache/
+.vscode/
 __pycache__/
 *.py[cod]
 .venv/
 venv/
-
-# Notebooks
 .ipynb_checkpoints/
+.env
+.env.*
+*.log
+*.tmp
+*.part
+*.crdownload
+*.tar.gz
+*.zip

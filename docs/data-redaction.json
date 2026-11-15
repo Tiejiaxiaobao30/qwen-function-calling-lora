@@ -1,0 +1,30 @@
+{
+  "train": {
+    "rows": 5000,
+    "redacted_rows": [
+      814,
+      1109,
+      1267,
+      2165,
+      2323,
+      3023,
+      3320,
+      3604
+    ],
+    "placeholder": "[REDACTED_CREDENTIAL]"
+  },
+  "val": {
+    "rows": 500,
+    "redacted_rows": [
+      128
+    ],
+    "placeholder": "[REDACTED_CREDENTIAL]"
+  },
+  "test": {
+    "rows": 500,
+    "redacted_rows": [
+      126
+    ],
+    "placeholder": "[REDACTED_CREDENTIAL]"
+  }
+}
