@@ -1,14 +1,14 @@
-# Qwen2.5 工具调用微调：源码注释与实验备份
+# Qwen2.5 工具调用微调与评测
 
-基于 **Qwen2.5-1.5B-Instruct + QLoRA** 的工具调用学习与复现项目。保留源码阅读时添加的中文注释，归档云端训练产生的数据、checkpoint、最终 LoRA adapter、评测与错误分析。
+基于 **Qwen2.5-1.5B-Instruct + QLoRA** 的个人工具调用实验项目，围绕结构化 JSON 调用完成数据处理、监督微调、Base / Tuned 对照评测与错误分析。在 500 条测试样本上，严格 Exact Match 从 **31.0% 提升至 77.4%**。
 
-本次备份在 **2026-11-15** 完成本地核验与整理；该日期不是对云端训练时间的推断。完整压缩包内 69 个文件均与本地解压副本通过 SHA-256 比对。
+项目基于开源训练流程开展复现，保留中文源码阅读注释、实际运行产物与来源记录，并在本仓库持续维护。实现基础与当前工作范围见文末；归档校验详情见 [实验记录](docs/run-20261115.md)。
 
-## 先看文件树
+## 项目结构
 
 ```text
 qwen-function-calling-lora/
-├── README.md                         # 当前导航与本次结果
+├── README.md                         # 项目说明、实验结果与运行入口
 ├── config.py                         # 模型、数据量、路径和训练参数
 ├── prepare_data.py                   # 数据处理与划分（中文注释）
 ├── train.py                          # QLoRA 训练、恢复与保存（中文注释）
@@ -18,7 +18,7 @@ qwen-function-calling-lora/
 ├── publish.py                        # 上游 Hugging Face 发布辅助脚本
 ├── requirements.txt                  # 项目依赖声明
 │
-├── outputs/                          # ★ 本次实际运行产物
+├── outputs/                          # 已完成实验的数据、模型与评测产物
 │   ├── data/                         # 原始划分，Arrow文件仅保存在本地
 │   │   ├── meta.json                 # 数据来源、seed、数量等
 │   │   ├── train/                    # 5,000 条训练数据
@@ -44,8 +44,8 @@ qwen-function-calling-lora/
 │   │   ├── adapter_config.json
 │   │   ├── tokenizer.json
 │   │   └── ...
-│   ├── eval_results.json             # ★ 本次 Base / Tuned 指标
-│   └── error_analysis.json           # ★ 本次错误统计与部分样例
+│   ├── eval_results.json             # 本项目实验的 Base / Tuned 对照结果
+│   └── error_analysis.json           # 本项目实验的错误分类与部分样例
 │
 ├── docs/
 │   ├── run-20261115.md               # 来源、校验依据与验证边界
@@ -60,7 +60,7 @@ qwen-function-calling-lora/
 └── .gitignore                        # 排除缓存、临时文件与本机配置
 ```
 
-## 本次结果
+## 实验结果
 
 来源：[outputs/eval_results.json](outputs/eval_results.json)。测试集 **500 条**，greedy decoding，采用项目实现的 BFCL-style AST match；这不是官方 BFCL 榜单评测。
 
@@ -74,7 +74,7 @@ qwen-function-calling-lora/
 
 **不要混用根目录报告。** 根目录两份 JSON 和 [上游 README](docs/upstream-README.md) 属于初始仓库内容，其中 78.8% 等数字不代表本次复现结果。
 
-## 最终权重来自哪里
+## 训练配置与模型选择
 
 - 底座：`Qwen/Qwen2.5-1.5B-Instruct`。
 - 数据：`Salesforce/xlam-function-calling-60k`，处理后使用 5000 / 500 / 500 划分，seed 42。
@@ -84,7 +84,7 @@ qwen-function-calling-lora/
 
 以上来自备份文件核对；本次整理没有重新训练、重新运行 GPU 评测或验证恢复训练。
 
-## 获取完整文件
+## 模型与数据获取
 
 直接克隆即可获取完整文件：
 
@@ -99,7 +99,7 @@ cd qwen-function-calling-lora
 
 中间 `cache-*.arrow` 仅在本地保留，不纳入提交。完整 Qwen 底座和 Hugging Face 缓存没有打包，需要另行下载。数据来源及署名见 [DATA_ATTRIBUTION.md](docs/DATA_ATTRIBUTION.md)，使用前请阅读并接受来源站点的适用条件。
 
-## 源码阅读与运行入口
+## 运行与开发
 
 推荐顺序：`config.py → prepare_data.py → train.py → scoring.py → evaluate.py → error_analysis.py`。
 
@@ -119,6 +119,15 @@ $env:OUTPUT_ROOT = "outputs-new-run"
 
 根目录保留学习注释版；[cloud-run-source](docs/cloud-run-source/) 保存备份中的原始云端代码，便于追溯。依赖声明不是完整环境锁文件，恢复时仍需核验 GPU、驱动和库版本。`publish.py` 为上游发布工具，使用前应检查目标账号、模型卡和指标路径；本次整理没有向 Hugging Face 发布模型。
 
-## 来源
+## 项目基础与工作范围
 
-初始仓库版本为 `33a10fc`，保留其 Git 历史和上游署名。原作者说明及发布链接见 [上游 README](docs/upstream-README.md)；本 Fork 中的中文阅读注释与本次运行产物分别保留，避免把上游实现或结果表述成本人原创。
+本项目以开源项目 `qwen-function-calling-lora` 的 `33a10fc` 版本为起点，训练、生成与评分流程复用上游实现。原作者说明及发布链接见 [上游 README](docs/upstream-README.md)，保留原 Git 历史与署名。
+
+| 范围 | 当前内容 |
+|---|---|
+| 开源实现基础 | 数据准备、QLoRA 训练、生成、AST 风格评分与错误分类脚本 |
+| 本仓库的阅读整理 | 中文源码注释、文件结构导航、运行源码与阅读版本对照保存 |
+| 本项目的实验产物 | 5000 / 500 / 500 数据划分、训练 checkpoint、最终 adapter、500 条测试的 Base / Tuned 报告与错误统计 |
+| 结果追溯与发布整理 | 产物哈希清单、最佳 checkpoint 核对、数据脱敏与原始/公开数据边界说明 |
+
+后续实验与代码改进继续在本仓库维护，新增结果以独立运行记录为依据。当前版本属于基于开源实现的复现实验，尚未验证自研方法、消融实验或跨数据集泛化收益。
