@@ -12,11 +12,8 @@ CC-BY-NC-4.0 to respect those terms.
 """
 import json
 import os
-
 from huggingface_hub import HfApi
-
 import config
-
 
 def pct(x):
     return f"{x * 100:.1f}%"
