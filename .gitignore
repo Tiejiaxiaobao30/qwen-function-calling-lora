@@ -1,4 +1,4 @@
-# Verified outputs are versioned; intermediate caches stay local.
+# Historical tracked artifacts remain tracked; new run artifacts stay local.
 outputs/**/cache-*.arrow
 outputs/data/*/*.arrow
 outputs/**/cache-*.arrow.lock
@@ -20,3 +20,10 @@ venv/
 *.crdownload
 *.tar.gz
 *.zip
+
+# Exp1 closeout: do not publish datasets, generations, weights or archives.
+/outputs/
+/exp1-cloud-results/
+*.safetensors
+*.pt
+*.pth

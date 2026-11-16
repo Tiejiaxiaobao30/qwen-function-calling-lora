@@ -1,6 +1,6 @@
 # Qwen2.5 工具调用微调与评测
 
-基于 **Qwen2.5-1.5B-Instruct + QLoRA** 的个人工具调用实验项目，围绕结构化 JSON 调用完成数据处理、监督微调、Base / Tuned 对照评测与错误分析。在 500 条测试样本上，严格 Exact Match 从 **31.0% 提升至 77.4%**。
+基于 **Qwen2.5-1.5B-Instruct + QLoRA** 的个人工具调用实验项目，围绕结构化 JSON 调用完成数据处理、监督微调、Base / Tuned 对照评测与错误分析。Exp0 在 500 条测试样本上，严格 Exact Match 从 **31.0% 提升至 77.4%**；Exp1 教师改写对照未观察到整体 Exact Match 收益。
 
 项目基于开源训练流程开展复现，保留中文源码阅读注释、实际运行产物与来源记录，并在本仓库持续维护。实现基础与当前工作范围见文末；归档校验详情见 [实验记录](docs/run-20261115.md)。
 
@@ -16,9 +16,11 @@ qwen-function-calling-lora/
 ├── evaluate.py                       # Base / Tuned 对照评测（中文注释）
 ├── error_analysis.py                 # 错误分类与宽松匹配（中文注释）
 ├── publish.py                        # 上游 Hugging Face 发布辅助脚本
+├── augment_data.py                   # Exp1：一次尝试，按成功N条生成Rewrite及Control
+├── augmentation_utils.py             # Exp1：样本转换、提示词与基本校验
 ├── requirements.txt                  # 项目依赖声明
 │
-├── outputs/                          # 已完成实验的数据、模型与评测产物
+├── outputs/                          # 历史成果与当前Exp1（旧中间产物已移出归档）
 │   ├── data/                         # 原始划分，Arrow文件仅保存在本地
 │   │   ├── meta.json                 # 数据来源、seed、数量等
 │   │   ├── train/                    # 5,000 条训练数据
@@ -44,6 +46,8 @@ qwen-function-calling-lora/
 │   │   ├── adapter_config.json
 │   │   ├── tokenizer.json
 │   │   └── ...
+│   ├── exp1-rewrite-v2/              # 已完成的本地Rewrite数据与生成记录
+│   │   └── data/                     # 候选/成功清单、配置与导出的数据
 │   ├── eval_results.json             # 本项目实验的 Base / Tuned 对照结果
 │   └── error_analysis.json           # 本项目实验的错误分类与部分样例
 │
@@ -60,6 +64,10 @@ qwen-function-calling-lora/
 └── .gitignore                        # 排除缓存、临时文件与本机配置
 ```
 
+`data` 保留以前实验的原始划分，默认评测仍读取它；`data-redacted` 是同一划分的脱敏副本，今天的增强读取它，不能混作完全相同的历史评测输入。`adapter-final`、`checkpoints` 和两个评测JSON保留以前成果。
+
+Exp1 已完成：500 个候选中 accepted=490；`outputs/exp1-control-flex/data` 仅重复这 490 个成功 seed 的原始样本，Rewrite 增加 490 条教师改写。两组均为 5490/500/500。云端完整归档位于本地 `exp1-cloud-results/`；结果、核验边界及命令见 [Exp1 实验记录](docs/exp1-results.md)，旧生成过程见本地 `docs/exp1-teacher-augmentation.md`（尚未提交）。
+
 ## 实验结果
 
 来源：[outputs/eval_results.json](outputs/eval_results.json)。测试集 **500 条**，greedy decoding，采用项目实现的 BFCL-style AST match；这不是官方 BFCL 榜单评测。
@@ -74,6 +82,23 @@ qwen-function-calling-lora/
 
 **不要混用根目录报告。** 根目录两份 JSON 和 [上游 README](docs/upstream-README.md) 属于初始仓库内容，其中 78.8% 等数字不代表本次复现结果。
 
+## Exp1：教师改写与重复采样对照
+
+固定 5000 条训练源，seed=42 抽取 500 个候选，实际接受 490 个。Control 追加成功 seed 的 490 条原样本，Rewrite 追加对应的 490 条教师改写；成功 seed 清单完全相同，两组 train=5490、val/test=500，val/test 已逐行核对一致。规则校验通过不代表人工语义验收。
+
+| 模型 / 实验 | JSON 有效 | 函数名准确 | 严格 Exact Match | 失败数 |
+|---|---:|---:|---:|---:|
+| Base（报告记录值） | 76.6% | 44.6% | 31.0% | — |
+| Exp0 Tuned（历史参考） | 99.2% | 98.8% | 77.4% | 113 |
+| Exp1 Control Tuned | 99.4% | 98.8% | 77.2% | 114 |
+| Exp1 Rewrite Tuned | 99.6% | 99.2% | 76.8% | 116 |
+
+Rewrite 相比 Control：JSON **+0.2 pp**、函数名 **+0.4 pp**、严格匹配 **−0.4 pp（少正确 2 道）**。参数值错误 62→58，但参数键错误 45→51；主要瓶颈仍在参数生成。增加数据不一定提升性能，本轮没有整体 Exact Match 改善证据。
+
+**比较边界：** Exp1 两组测试集完全相同，但与 Exp0 原始 test 有 1 条输入不同（脱敏），val 也有 1 条不同；不能宣称三组严格同一输入。Exp0/Exp1 训练量为 5000/5490、结束步数为 939/1032，Control−Exp0 不能解释为纯数据量因果。单次运行、500 条测试、差异很小，可能随机波动，未做多随机种子或显著性检验。Exp1 JSON 中 Base 数字与历史相同，本次未验证其是否独立重评。
+
+汇总统计、错误样例观察（不公开原始样本）、数据哈希与产物定位见 [Exp1 实验记录](docs/exp1-results.md) 和 [机器可读汇总](docs/exp1-results-summary.json)。
+
 ## 训练配置与模型选择
 
 - 底座：`Qwen/Qwen2.5-1.5B-Instruct`。
@@ -86,16 +111,18 @@ qwen-function-calling-lora/
 
 ## 模型与数据获取
 
-直接克隆即可获取完整文件：
+克隆可获取已提交的代码、说明与历史文件；Exp1 完整归档仅保存在本地：
 
 ```bash
 git clone https://github.com/Tiejiaxiaobao30/qwen-function-calling-lora.git
 cd qwen-function-calling-lora
 ```
 
-本地有效运行产物合计约 **441.6 MiB**；公开版本用 `data-redacted/` 替代原始 Arrow 数据，其余产物按原文件保存。单文件均小于 100 MiB。这个公开 Fork 不能上传新的 Git LFS 对象，因此采用普通 Git；首次克隆需要下载较多内容。后续多轮实验应采用独立模型存储或发布附件，避免重复累积大文件历史。
+历史归档统计约 **441.6 MiB**；此前公开版本用 `data-redacted/` 替代原始 Arrow 数据，其余产物按原文件保存。单文件均小于 100 MiB。这个公开 Fork 不能上传新的 Git LFS 对象，因此采用普通 Git；首次克隆需要下载较多内容。后续多轮实验应采用独立模型存储或发布附件，避免重复累积大文件历史。
 
-原始数据10条样本的工具定义默认值含疑似GitHub凭证，公开副本将其替换为 `[REDACTED_CREDENTIAL]`，保留数量与行顺序。原始Arrow文件只在本地和完整备份中保留，未推送。**本次指标来自原始数据，不是对脱敏副本重跑的结果。** 从GitHub恢复时，需在本地核对后将 `data-redacted/` 复制为 `data/` 才能用于默认脚本；这不会严格复现原始输入。脱敏行号见 [data-redaction.json](docs/data-redaction.json)。
+原始数据10条样本的工具定义默认值含疑似GitHub凭证，公开副本将其替换为 `[REDACTED_CREDENTIAL]`，保留数量与行顺序。原始Arrow文件只在本地和完整备份中保留，未推送。**Exp0 指标来自原始数据，不是对脱敏副本重跑的结果；Exp1 使用脱敏源。** 从GitHub恢复时，需在本地核对后将 `data-redacted/` 复制为 `data/` 才能用于默认脚本；这不会严格复现 Exp0 原始输入。脱敏行号见 [data-redaction.json](docs/data-redaction.json)。
+
+本次发布仅新增说明与汇总统计；遵循 xLAM gated / research-only 使用边界，不新增公开原始或衍生样本、教师输出、权重及 checkpoint。历史已跟踪文件仍在仓库中，本次忽略规则不会撤销其跟踪，也不代表重新审查或授权再分发；不要将已有文件视为数据许可。
 
 中间 `cache-*.arrow` 仅在本地保留，不纳入提交。完整 Qwen 底座和 Hugging Face 缓存没有打包，需要另行下载。数据来源及署名见 [DATA_ATTRIBUTION.md](docs/DATA_ATTRIBUTION.md)，使用前请阅读并接受来源站点的适用条件。
 
@@ -130,4 +157,4 @@ $env:OUTPUT_ROOT = "outputs-new-run"
 | 本项目的实验产物 | 5000 / 500 / 500 数据划分、训练 checkpoint、最终 adapter、500 条测试的 Base / Tuned 报告与错误统计 |
 | 结果追溯与发布整理 | 产物哈希清单、最佳 checkpoint 核对、数据脱敏与原始/公开数据边界说明 |
 
-后续实验与代码改进继续在本仓库维护，新增结果以独立运行记录为依据。当前版本属于基于开源实现的复现实验，尚未验证自研方法、消融实验或跨数据集泛化收益。
+后续实验与代码改进继续在本仓库维护，新增结果以独立运行记录为依据。当前版本属于基于开源实现的复现实验，已完成上述 Exp1 配对对照；尚未验证自研方法收益或跨数据集泛化收益。

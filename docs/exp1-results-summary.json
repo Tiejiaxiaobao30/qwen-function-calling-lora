@@ -1,0 +1,209 @@
+{
+  "note": "Aggregate statistics only; source sample_misses, datasets and weights are excluded. Base values in Exp1 are recorded values; not proof of a fresh base evaluation.",
+  "results": {
+    "exp0": {
+      "source": "outputs",
+      "eval": {
+        "base": {
+          "json_valid": 0.766,
+          "name_acc": 0.446,
+          "exact_match": 0.31
+        },
+        "tuned": {
+          "json_valid": 0.992,
+          "name_acc": 0.988,
+          "exact_match": 0.774
+        },
+        "model": "Qwen/Qwen2.5-1.5B-Instruct",
+        "test_n": 500,
+        "decoding": "greedy",
+        "metric": "BFCL-style AST match"
+      },
+      "errors": {
+        "test_n": 500,
+        "strict_exact_match": 0.774,
+        "lenient_exact_match": 0.778,
+        "type_coercion_gap": 0.0040000000000000036,
+        "total_misses": 113,
+        "breakdown": {
+          "wrong_arg_keys": 46,
+          "wrong_arg_values": 61,
+          "wrong_function_name": 2,
+          "invalid_json": 4
+        }
+      },
+      "source_sha256": {
+        "eval_results.json": "70ef95c1bd845a3c2cde87110de95187972e1fc96c38b9e95c6ee8612c31606a",
+        "error_analysis.json": "ee998b17a3e1a4f3ec614877194438c3e0a5775d9eef09a38deb7df972313426"
+      }
+    },
+    "control": {
+      "source": "exp1-cloud-results/outputs/exp1-control-flex",
+      "eval": {
+        "base": {
+          "json_valid": 0.766,
+          "name_acc": 0.446,
+          "exact_match": 0.31
+        },
+        "tuned": {
+          "json_valid": 0.994,
+          "name_acc": 0.988,
+          "exact_match": 0.772
+        },
+        "model": "Qwen/Qwen2.5-1.5B-Instruct",
+        "test_n": 500,
+        "decoding": "greedy",
+        "metric": "BFCL-style AST match"
+      },
+      "errors": {
+        "test_n": 500,
+        "strict_exact_match": 0.772,
+        "lenient_exact_match": 0.78,
+        "type_coercion_gap": 0.008000000000000007,
+        "total_misses": 114,
+        "breakdown": {
+          "wrong_arg_keys": 45,
+          "wrong_arg_values": 62,
+          "wrong_function_name": 3,
+          "invalid_json": 3,
+          "other": 1
+        }
+      },
+      "source_sha256": {
+        "eval_results.json": "3b77b0bfbcf1f6a9cab793cb33506b5669f41bbc9bce994c23054b3066218cf8",
+        "error_analysis.json": "635cde49a4037cfae1ca4f3fcc10645d17e07f1e4a363767d7a745bb7784147b"
+      }
+    },
+    "rewrite": {
+      "source": "exp1-cloud-results/outputs/exp1-rewrite-v2",
+      "eval": {
+        "base": {
+          "json_valid": 0.766,
+          "name_acc": 0.446,
+          "exact_match": 0.31
+        },
+        "tuned": {
+          "json_valid": 0.996,
+          "name_acc": 0.992,
+          "exact_match": 0.768
+        },
+        "model": "Qwen/Qwen2.5-1.5B-Instruct",
+        "test_n": 500,
+        "decoding": "greedy",
+        "metric": "BFCL-style AST match"
+      },
+      "errors": {
+        "test_n": 500,
+        "strict_exact_match": 0.768,
+        "lenient_exact_match": 0.772,
+        "type_coercion_gap": 0.0040000000000000036,
+        "total_misses": 116,
+        "breakdown": {
+          "wrong_arg_keys": 51,
+          "wrong_arg_values": 58,
+          "wrong_call_count": 1,
+          "other": 3,
+          "wrong_function_name": 1,
+          "invalid_json": 2
+        }
+      },
+      "source_sha256": {
+        "eval_results.json": "8e85e1cb17795b80e59b992f2ebecb35c9220356f97e958bc8c4ec3e3472abf2",
+        "error_analysis.json": "b5cbb5c5a877c1eb0225efa530435275952a036e968026c1cf9e3c69f458c7bc"
+      }
+    }
+  },
+  "dataset_verification": {
+    "datasets": {
+      "exp0": {
+        "train": {
+          "n": 5000,
+          "row_sha256": "38c248e7ba9ee5bfb5cda0e9006732302ea29d426ef2416e6e39852ff022558e"
+        },
+        "val": {
+          "n": 500,
+          "row_sha256": "50f34a6285e2ffac15813e9a88bac792ca89d7da07e30305ced71c3d6e58b373"
+        },
+        "test": {
+          "n": 500,
+          "row_sha256": "4beaee2f677f796343cdccc6c06abc45abb4f62340a3af699ba2bbcf24fd7697"
+        }
+      },
+      "redacted": {
+        "train": {
+          "n": 5000,
+          "row_sha256": "fddef5fda11fa3b5ba5b76e8eb0b47040b66200a03b6492b240e553794d48d04"
+        },
+        "val": {
+          "n": 500,
+          "row_sha256": "dbdeced22157cbb6dede56b61d067dfca6ee003a3712a96a247e1845eb7f4058"
+        },
+        "test": {
+          "n": 500,
+          "row_sha256": "5ebc6b1a01fcd60fb838f2effdaf0142fd0f65e37e2c8d7ffa548f783bbfd3c8"
+        }
+      },
+      "control": {
+        "train": {
+          "n": 5490,
+          "row_sha256": "ef393e95ff8b9283fadaa4a48a8850aaee8ffe8392b180d6f4b7728e299486cd"
+        },
+        "val": {
+          "n": 500,
+          "row_sha256": "dbdeced22157cbb6dede56b61d067dfca6ee003a3712a96a247e1845eb7f4058"
+        },
+        "test": {
+          "n": 500,
+          "row_sha256": "5ebc6b1a01fcd60fb838f2effdaf0142fd0f65e37e2c8d7ffa548f783bbfd3c8"
+        }
+      },
+      "rewrite": {
+        "train": {
+          "n": 5490,
+          "row_sha256": "8f1213d949da3d4fb9f2b65fb6aa5a0075aa9d9c0dc5851f3cb0744a89141e0f"
+        },
+        "val": {
+          "n": 500,
+          "row_sha256": "dbdeced22157cbb6dede56b61d067dfca6ee003a3712a96a247e1845eb7f4058"
+        },
+        "test": {
+          "n": 500,
+          "row_sha256": "5ebc6b1a01fcd60fb838f2effdaf0142fd0f65e37e2c8d7ffa548f783bbfd3c8"
+        }
+      }
+    },
+    "comparisons": {
+      "exp0_vs_control_val": {
+        "equal": false,
+        "differing_indices_zero_based": [
+          128
+        ]
+      },
+      "exp0_vs_control_test": {
+        "equal": false,
+        "differing_indices_zero_based": [
+          126
+        ]
+      },
+      "redacted_vs_control_val": {
+        "equal": true,
+        "differing_indices_zero_based": []
+      },
+      "redacted_vs_control_test": {
+        "equal": true,
+        "differing_indices_zero_based": []
+      },
+      "control_vs_rewrite_val": {
+        "equal": true,
+        "differing_indices_zero_based": []
+      },
+      "control_vs_rewrite_test": {
+        "equal": true,
+        "differing_indices_zero_based": []
+      }
+    },
+    "accepted_seed_equality": true,
+    "accepted_n": 490,
+    "candidate_n": 500
+  }
+}
