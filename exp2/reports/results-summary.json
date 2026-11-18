@@ -1,0 +1,124 @@
+{
+  "data": {
+    "data/train": {
+      "n": 5000,
+      "dpo_key_sha256": "39ea533693dbbb15b7653c8cab366f39c1991cc61dee056565ce0afee99cf6d3"
+    },
+    "data/val": {
+      "n": 500,
+      "dpo_key_sha256": "dd3b2b2cbd83dfebaf2057ab8bafa4a109bf96b72b3adf136523e456d44a7dd2"
+    },
+    "data/test": {
+      "n": 500,
+      "dpo_key_sha256": "08e40f635c338c48f1651c5283ac941938a97958b68dc1993635143d5b639509"
+    },
+    "data-redacted/train": {
+      "n": 5000,
+      "dpo_key_sha256": "e2494175caa9bdf13148791017bc88b5906395ea9dec30b73ecffaaf83b7b3cd"
+    },
+    "data-redacted/val": {
+      "n": 500,
+      "dpo_key_sha256": "3156ff1dee33c8f31eebc9751f4cf4e8ff5603047446ab070ab874d9cfbf8dd5"
+    },
+    "data-redacted/test": {
+      "n": 500,
+      "dpo_key_sha256": "230a089d354ebb3f31794c292861dd8c3d329334c3a13663dc22cc555bbc06c4"
+    }
+  },
+  "predictions": {
+    "val": {
+      "n": 500,
+      "metrics": {
+        "json_valid": 0.998,
+        "name_acc": 0.994,
+        "exact_match": 0.792
+      },
+      "errors": {
+        "wrong_arg_keys": 44,
+        "wrong_arg_values": 57,
+        "invalid_json": 1,
+        "wrong_function_name": 2
+      },
+      "prediction_file_sha256": "77d412c6867bb84ea9fe60a579c613816ea6992fb617de6b7dfcb032b9ef482a",
+      "gold_matches_local_original": true
+    },
+    "test": {
+      "n": 500,
+      "metrics": {
+        "json_valid": 0.992,
+        "name_acc": 0.988,
+        "exact_match": 0.78
+      },
+      "errors": {
+        "wrong_arg_keys": 41,
+        "wrong_arg_values": 63,
+        "wrong_function_name": 2,
+        "invalid_json": 4
+      },
+      "prediction_file_sha256": "1ee1853d6d1f846bd74c802cddc8d103961c99d38772d81b39b9682e72779f54",
+      "gold_matches_local_original": true
+    }
+  },
+  "weights": {
+    "tensor_count": 392,
+    "final_equals_best_after_dtype_cast": true,
+    "final_sha256": "0dc2b3c9a32c4a43f970f95d45409494454e2984e5e46c4be3f1502240b6967e",
+    "best_sha256": "b14419c10a355b75fb2d3d689cc04de9f7eab19276840259660f1623c42b1d2e"
+  },
+  "preferences": {
+    "train": {
+      "n": 451,
+      "dpo_key_sha256": "df4630e50da0d7c4c15b275ffbbcfee2a4fc1c8618902f16b240a43dcc9560b6"
+    },
+    "val": {
+      "n": 50,
+      "dpo_key_sha256": "b469f906dd783299a83e048f52f4130ded8858563aa4b232cc6f9dc76a93317f"
+    }
+  },
+  "candidates": {
+    "n_sources": 5000,
+    "candidate_slots": 20000,
+    "source_matches_local_original": true,
+    "file_sha256": "cfe8385018103e15c0946e8730bc46f48c1ade11f0b14351d3cf6990bbc72c5b"
+  },
+  "preference_audit": {
+    "sources": 5000,
+    "unique_candidates": 6255,
+    "wrong_candidate": 1532,
+    "correct_candidate": 4658,
+    "no_sampled_pair": 4487,
+    "invalid_candidate": 65,
+    "duplicate_or_overlap": 12,
+    "canonical_score_disagreement": 2,
+    "train": 451,
+    "val": 50,
+    "valid_query_groups": 500,
+    "val_query_groups": 50
+  },
+  "training": {
+    "version": 1,
+    "sanity": false,
+    "train_sha256": "df4630e50da0d7c4c15b275ffbbcfee2a4fc1c8618902f16b240a43dcc9560b6",
+    "val_sha256": "b469f906dd783299a83e048f52f4130ded8858563aa4b232cc6f9dc76a93317f",
+    "base_model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "seed": 42,
+    "max_length": 2048,
+    "epochs": 3,
+    "max_steps": -1,
+    "batch_size": 2,
+    "accumulation": 8,
+    "interval": 25,
+    "learning_rate": 5e-06,
+    "beta": 0.1,
+    "global_step": 87,
+    "epoch": 3.0,
+    "best_metric": 0.6850159168243408,
+    "best_checkpoint": "checkpoint-50"
+  },
+  "limitations": [
+    "Exp0 reference in Exp2 archive is upstream 499-row report, excluded as paired baseline.",
+    "Historical Exp0 77.4% and Exp2 78.0% are separate runs; no fresh paired Exp0 prediction file is present.",
+    "Original and redacted data differ; no GPU inference or training performed during organization.",
+    "Stored source compare_exp2.py would evaluate both models; archive contains only exp2 output, so exact execution command is not established."
+  ]
+}

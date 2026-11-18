@@ -1,8 +1,0 @@
-# Public fork rejects new LFS objects. Each artifact is below 100 MiB.
-outputs/** -text
-outputs/**/*.safetensors binary
-outputs/**/*.arrow binary
-outputs/**/*.pt binary
-outputs/**/*.pth binary
-outputs/**/*.bin binary
-outputs/**/tokenizer.json binary

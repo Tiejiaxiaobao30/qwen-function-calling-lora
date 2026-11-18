@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-18",
+  "checks": [
+    "six_root_sources_byte_identical",
+    "all_public_python_ast",
+    "real_package_imports_offline",
+    "original_scoring_examples_and_empty_calls",
+    "exp1_mock_teacher_rewrite_answer_preservation",
+    "candidate_resume_valid_tail_repair_and_manifest_drift_rejection",
+    "batch_manifest_drift_rejected_before_tail_mutation",
+    "evaluation_nonempty_destination_rejected",
+    "dpo_step_plan_and_run_resume_guards_with_stubbed_trl",
+    "cpu_policy_reference_independent_and_frozen_checks",
+    "public_markdown_local_links",
+    "public_secret_patterns_and_json_payload_absence"
+  ],
+  "passed": 12,
+  "gpu_training_or_inference": false,
+  "real_teacher_calls": false,
+  "trl_available": false,
+  "trainer_logic_used_stub": true,
+  "known_environment_warning": "datasets/multiprocess shutdown RLock cleanup warning; evidence check exited 0",
+  "protected_root_files": [
+    "config.py",
+    "prepare_data.py",
+    "train.py",
+    "scoring.py",
+    "evaluate.py",
+    "error_analysis.py"
+  ]
+}

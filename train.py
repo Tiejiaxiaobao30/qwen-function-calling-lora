@@ -12,7 +12,7 @@ import torch
 from datasets import load_from_disk #从硬盘加载之前处理好的数据集
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 # prepare_model_for_kbit_training 为量化模型进行参数高效训练做准备
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, set_seed
 # 配置模型的低比特量化方式
 from trl import SFTConfig, SFTTrainer
 import config
@@ -42,6 +42,7 @@ def load_quantized_base():
 
 # 训练和验证交替进行，而不是同时进行
 def main():
+    set_seed(config.SEED)  # 在 LoRA 初始化前固定随机种子
     train_ds = load_from_disk(os.path.join(config.DATA_DIR, "train"))
     val_ds = load_from_disk(os.path.join(config.DATA_DIR, "val"))
 
@@ -60,6 +61,7 @@ def main():
 
     bf16 = torch.cuda.is_bf16_supported() # 先检查 GPU 是否支持 BF16
     cfg = SFTConfig(
+        seed=config.SEED, data_seed=config.SEED,
         output_dir=config.CHECKPOINT_DIR,   # 指定训练 checkpoint 的保存位置
         max_length=config.TRAIN_MAX_LENGTH, # 最大训练序列长度 1024
         completion_only_loss=True,          # loss on the assistant JSON only, not the tool schemas
