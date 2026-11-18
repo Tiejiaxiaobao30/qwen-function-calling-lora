@@ -1,73 +1,178 @@
-# Qwen2.5 工具调用微调与评测
+# Qwen2.5 工具调用：QLoRA 微调、数据增强与 DPO
 
-基于 [ArunarkSingh/qwen-function-calling-lora](https://github.com/ArunarkSingh/qwen-function-calling-lora) 的个人实验仓库。保留上游 QLoRA SFT、生成与评分流程及用户源码注释，扩展教师改写对照（Exp1）与 SFT→DPO（Exp2）。这些是复现和扩展实验，不宣称自研算法或官方 BFCL 成绩。
+面向结构化工具调用的模型后训练实验项目。基于 **Qwen2.5-1.5B-Instruct**，围绕“生成格式是否可靠、工具与参数是否正确”构建 **数据准备 → SFT 基线 → 教师改写对照 / DPO 偏好优化 → 评测与错误分析** 的完整实验流程。
 
-## 实际结果
+基于 [ArunarkSingh/qwen-function-calling-lora](https://github.com/ArunarkSingh/qwen-function-calling-lora) 扩展，保留原始训练、生成、评分流程及中文阅读注释，新增 Exp1 教师改写与配对 Control、Exp2 SFT→DPO、续做校验与结果核验。具体工作与上游来源分开说明。
 
-同为项目 AST 严格匹配、greedy、500 条 Test，但来源和训练条件有差异，不能将本表解释为严格受控的逐阶段提升。
+**核心结果：** 历史 Exp0 的500条测试中，Base→QLoRA SFT 严格匹配从 **31.0% 提升至77.4%**；Exp2 DPO 归档结果为 **Dev 79.2%、Test 78.0%**。Exp1教师改写未优于配对Control。Exp2缺少本轮同条件Exp0逐题预测，不能将其与历史基线的差值直接解释为DPO净收益。
 
-| 实验 | 训练数据/起点 | JSON 有效 | 函数名 | 严格匹配 | 失败 |
-|---|---|---:|---:|---:|---:|
-| Base（Exp0 报告记录） | 未微调 | 76.6% | 44.6% | 31.0% | — |
-| Exp0 SFT | 原始 5000 条，3 epochs | 99.2% | 98.8% | 77.4%（387/500） | 113 |
-| Exp1 Control | 脱敏 5000 + 重复 490 | 99.4% | 98.8% | 77.2%（386/500） | 114 |
-| Exp1 Rewrite | 脱敏 5000 + 教师改写 490 | 99.6% | 99.2% | 76.8%（384/500） | 116 |
-| Exp2 DPO | 从 Exp0 adapter 继续，451 对偏好 | 99.2% | 98.8% | 78.0%（390/500） | 110 |
+## 项目目标
 
-Exp1 Rewrite 对 Control 的严格匹配低 0.4 个百分点，本轮没有整体收益。Exp2 Dev（原 500 val）为 JSON 99.8%、函数名 99.4%、严格匹配 79.2%（396/500）；这是生成质量验证，区别于 DPO 的 50 对偏好验证集。
+输入用户请求与可用工具定义，输出JSON调用列表，每个调用包含工具名称与参数；无适用工具时约定输出空列表。实验回答三个问题：
 
-Exp2 对历史 Exp0 的表面差值为 +0.6 个百分点（3 题），但没有本轮同条件 Exp0 逐题预测，不能声称已验证 DPO 净收益、显著提升或泛化收益。归档 `exp0_reference` 是 **499 条的上游报告**，不是本人的 500 条 Exp0 基线，已排除。Exp2 Test 预测的 gold、数据指纹与本地原始 500 条 Test 已核对一致；Exp1 使用脱敏输入，val 零基 128 / test 零基 126 与原始输入不同。
+- **SFT基线：** 小模型经QLoRA微调后，能否改善JSON输出、工具选择与参数匹配？
+- **数据增强：** 在训练条数相同的条件下，教师改写是否优于重复原样本？
+- **偏好优化：** 从SFT模型采样正负候选后，DPO的训练、选模与最终表现如何？
 
-## 目录与发布范围
+技术栈：Python、PyTorch、Transformers、PEFT / QLoRA、TRL（SFT / DPO）、Hugging Face Datasets。评价采用项目AST结构匹配，无LLM judge；不是官方BFCL榜单或真实工具执行评测。
+
+## 项目架构
+
+```mermaid
+flowchart TD
+    DATA["xLAM 工具调用数据"] --> SPLIT["清洗、对话格式化、长度过滤<br/>固定 train / val / test：5000 / 500 / 500"]
+    BASE["Qwen2.5-1.5B-Instruct"] --> SFT
+
+    subgraph E0["Exp0 · QLoRA SFT 基线"]
+        SFT["仅对 completion 计算损失<br/>4-bit NF4 + LoRA"] --> A0["Exp0 SFT Adapter"]
+    end
+    SPLIT --> SFT
+
+    subgraph E1["Exp1 · 教师改写对照"]
+        REDACT["固定脱敏划分<br/>仅 train seed 进入教师生成"] --> AUG["500 个候选 seed → 接受 490 条改写"]
+        AUG --> PAIR["Control：5000 + 对应原样本 490<br/>Rewrite：5000 + 对应改写 490"]
+        PAIR --> SFT1["两组分别从底座进行 SFT<br/>相同训练规模与超参数"]
+    end
+    SPLIT --> REDACT
+    BASE --> SFT1
+
+    subgraph E2["Exp2 · SFT → DPO"]
+        SAMPLE["Exp0 每源采样 4 个候选<br/>5000 源 / 20000 候选槽"] --> PREF["规则评分与过滤、query 分组隔离<br/>偏好 train 451 对 / val 50 对"]
+        PREF --> DPO["仅更新 Policy LoRA<br/>Reference 为独立冻结的 Exp0 副本"]
+        DPO --> A2["按偏好验证 loss 选模<br/>最佳 checkpoint-50"]
+    end
+    A0 --> SAMPLE
+    A0 --> DPO
+
+    A0 --> EVAL["对应 val / test 上 greedy 生成<br/>JSON 有效 / 函数名 / 严格匹配"]
+    SFT1 --> EVAL
+    A2 --> EVAL
+    EVAL --> ANALYSIS["参数键、参数值、函数名、格式错误分析<br/>聚合报告 + 数据 / 模型指纹"]
+```
+
+Exp1与Exp2是两条独立扩展路线：**Exp2从Exp0 SFT adapter继续训练，不接在Exp1后面。** Exp1使用脱敏输入，Exp0 / Exp2使用原始划分；共享评分函数不意味着评测输入完全相同。
+
+## 代码目录
+
+下面是GitHub公开代码目录。根目录六个核心脚本保留原有中文注释，Exp1 / Exp2的实现与报告分别放在各自目录。
 
 ```text
 qwen-function-calling-lora/
-├── config.py             # 原始注释文件，本轮字节不变
-├── prepare_data.py       # 原始注释文件，本轮字节不变
-├── train.py              # 原始注释文件，本轮字节不变（保留此前 seed 修复）
-├── scoring.py            # 原始注释文件，本轮字节不变
-├── evaluate.py           # 原始注释文件，本轮字节不变
-├── error_analysis.py     # 原始注释文件，本轮字节不变
-├── requirements.txt      # 原有依赖声明
+├── README.md                         # 项目概览、架构与实验结论
+├── requirements.txt                  # 原有依赖声明；环境差异见报告
+├── .gitignore                        # 逐文件公开白名单
+│
+├── config.py                         # 模型、数据划分、LoRA与训练配置
+├── prepare_data.py                   # 清洗、对话格式化、长度过滤与划分
+├── train.py                          # QLoRA SFT、恢复与最佳模型保存
+├── scoring.py                        # JSON解析、结构匹配与greedy生成
+├── evaluate.py                       # Base / Tuned测试对照
+├── error_analysis.py                 # 严格/宽松匹配与错误分类
+│
 ├── exp1/
-│   ├── augment_data.py / augmentation_utils.py / __init__.py
-│   ├── README.md
-│   ├── reports/          # 聚合统计与历史核验报告，公开
-│   └── local/            # 生成进度、两组数据/最终模型/checkpoint，仅本机
-├── exp2/
-│   ├── generate_candidates.py / generate_candidates_batch.py
-│   ├── build_preferences.py / train_dpo.py / compare_exp2.py
-│   ├── utils.py / __init__.py
-│   ├── README.md
-│   ├── reports/          # 最终实验报告、统计、审查与验证边界，公开
-│   └── local/archives/   # 完整云端归档、原始源码、模型与备份，仅本机
-├── README.md
-└── .gitignore            # 默认排除，逐文件公开白名单
+│   ├── __init__.py
+│   ├── README.md                     # 数据增强与配对对照运行说明
+│   ├── augment_data.py               # 教师请求、进度保存、两组数据导出
+│   ├── augmentation_utils.py         # 提示词、格式转换与规则校验
+│   └── reports/
+│       ├── exp1-results.md           # 数据、训练、Test与对照边界
+│       └── exp1-results-summary.json # 聚合指标与数据核验指纹
+│
+└── exp2/
+    ├── __init__.py
+    ├── README.md                     # DPO流程、环境、恢复与评测入口
+    ├── utils.py                      # 路径、内容指纹与Exp0模型加载
+    ├── generate_candidates.py        # 逐题采样、pilot与续做校验
+    ├── generate_candidates_batch.py  # 批量采样与完整来源核验
+    ├── build_preferences.py          # 正负偏好对、过滤与query分组划分
+    ├── train_dpo.py                  # 双SFT模型DPO、sanity与恢复
+    ├── compare_exp2.py               # val/test评测、模型选择与防覆盖
+    └── reports/
+        ├── experiment-report.md      # Exp0→Exp1→Exp2完整实验报告
+        ├── results-summary.json      # Exp2聚合结果与来源/权重核验
+        ├── local-checks.json         # 离线检查范围与结果
+        └── organization-review.md    # 文件归档、公开范围与验证记录
 ```
 
-Exp0 数据、最终 adapter 和 checkpoint 已整体移到本机相邻的 `E:/qwen-function-calling-lora-artifacts/exp0/`。整理前文档、旧 dpo 源码、publish 脚本、旧包和逐文件哈希在 `E:/qwen-function-calling-lora-artifacts/before-final-20261118/`。移动而非删除；原路径映射、完整性核验见 [整理与发布审查](exp2/reports/organization-review.md)。
+数据、教师响应、偏好对、逐题预测、模型权重和checkpoint不在公开目录中。本机Exp1 / Exp2产物分别保留在 `exp1/local/`、`exp2/local/archives/`；Exp0产物和旧文件备份存放在仓库外。具体位置见 [归档记录](exp2/reports/organization-review.md)。
 
-本分支公开文件树只含源码、运行说明和无样本的聚合结论。原始/脱敏 xLAM、教师响应、偏好对、预测/gold、错误样例、模型权重、checkpoint、二进制与压缩包均不提交。历史 Git 提交仍包含过去发布的产物；本次从新分支索引移除这些路径，没有改写历史，也不代表旧历史已清除。合并前 main 保持旧版本。
+## 实验设计与训练配置
 
-## 运行入口
+| 实验 | 数据构造与起点 | 关键配置 | 选模与产物 |
+|---|---|---|---|
+| **Exp0 · SFT** | 原始train 5000，从底座训练 | NF4 QLoRA，r16 / alpha32 / dropout0.05；3 epochs，lr2e-4，有效batch16，长度1024 | 结束939步；最佳checkpoint-600 |
+| **Exp1 · Control / Rewrite** | 固定脱敏train 5000；对相同成功seed追加490条原样本 / 改写；分别从底座训练 | 两组均5490条；3 epochs，有效batch16，lr2e-4，长度1024；教师记录qwen3.8-flash | 均结束1032步；最佳Control500 / Rewrite700 |
+| **Exp2 · DPO** | 从Exp0 adapter继续；采样正确与合法结构但评分错误的同源候选形成偏好对，无gold fallback | 451 / 50对；3 epochs，microbatch2 × 累积8，lr5e-6，beta0.1，长度2048 | 结束87步；偏好验证loss选择checkpoint-50 |
 
-从仓库根目录执行；Exp1/Exp2 用 `python -m ...`。包内源码仍复用根目录配置和评分，不能直接双击子目录脚本。
+Exp2的50对偏好验证集来自原train的独立query group，用于训练选模；原500条val用于生成质量开发评测，两者用途不同。4×4正式尝试出现OOM，成功运行采用2×8；最终adapter的392个张量已与最佳checkpoint转换精度后逐元素核对一致。
+
+## 实验结果
+
+以下Test均为500条、greedy生成，使用项目同一评分定义。Base为Exp0报告记录；Exp1使用脱敏输入。由于数据处理与运行条件存在差异，本表展示各次实验观察结果，不构成严格受控的逐阶段提升链。
+
+| 实验 | JSON有效率 | 函数名准确率 | 严格匹配EM | 正确 / 总数 |
+|---|---:|---:|---:|---:|
+| Base（Exp0记录） | 76.6% | 44.6% | 31.0% | 155 / 500 |
+| **Exp0 SFT** | **99.2%** | **98.8%** | **77.4%** | **387 / 500** |
+| Exp1 Control | 99.4% | 98.8% | 77.2% | 386 / 500 |
+| Exp1 Rewrite | 99.6% | 99.2% | 76.8% | 384 / 500 |
+| **Exp2 DPO** | **99.2%** | **98.8%** | **78.0%** | **390 / 500** |
+
+Exp2在原500条Dev（val）上的结果为 **JSON 99.8%、函数名99.4%、严格匹配79.2%（396/500）**。其他实验未找到可用的完整Dev生成质量报告，不以训练eval_loss代替，也不补造指标。
+
+### 实验结论
+
+1. **SFT建立了有效基线。** 历史Exp0中，严格匹配31.0%→77.4%（+46.4个百分点），JSON有效率76.6%→99.2%，改善体现在结构输出、工具选择与参数匹配。
+2. **本轮教师改写没有整体收益。** Rewrite相对相同规模的Control，JSON高0.2个百分点、函数名高0.4个百分点，但严格匹配低0.4个百分点（少对2题），不能据此宣称增强有效。
+3. **DPO完成了训练与最终结果核验。** Test为78.0%，相对历史Exp0高0.6个百分点（3题）；缺少本轮配对Exp0预测，尚不足以归因于DPO。没有多seed、显著性或跨数据集泛化结果。
+4. **剩余错误集中在参数。** Exp2的110个Test失败中，参数值63、参数键41，占104/110（约94.5%）。后续可重点检查参数约束、默认值与标签语义，这些是待验证方向。
+
+### Test错误分布
+
+| 错误类别 | Exp0 | Exp1 Control | Exp1 Rewrite | Exp2 |
+|---|---:|---:|---:|---:|
+| 参数值错误 | 61 | 62 | 58 | 63 |
+| 参数键错误 | 46 | 45 | 51 | 41 |
+| 函数名错误 | 2 | 3 | 1 | 2 |
+| 无效JSON | 4 | 3 | 2 | 4 |
+| 调用数量错误 | 0 | 0 | 1 | 0 |
+| 其他 | 0 | 1 | 3 | 0 |
+| **总失败** | **113** | **114** | **116** | **110** |
+
+分类沿用 `diagnose` 启发式；类别总量差异不等于逐题修复数量。数据构造、指纹、选模和局限见 [完整实验报告](exp2/reports/experiment-report.md)；Exp1细节见 [配对对照报告](exp1/reports/exp1-results.md)。
+
+## 运行与复现
+
+从仓库根目录执行。根六脚本共用 `config.py`，Exp1 / Exp2使用 `python -m ...` 包入口。需要具备数据访问条件、兼容依赖与GPU环境，公开仓库不附带数据或权重。
+
+新Exp0运行将输出指向全新、仓库外目录，避免覆盖成果：
 
 ```powershell
-cd E:\qwen-function-calling-lora
-# 读取已保存 Exp0 产物；不要重新 prepare_data 覆盖它们。
-$env:OUTPUT_ROOT = 'E:/qwen-function-calling-lora-artifacts/exp0'
-# 仅示例：以下评测会加载 GPU，并可能覆盖已有报告，先选新输出或备份。
-# python evaluate.py
-# python error_analysis.py
+$env:OUTPUT_ROOT = 'E:/qwen-fc-runs/exp0-new'
+python prepare_data.py
+python train.py
+python evaluate.py
+python error_analysis.py
 ```
 
-新 Exp0 训练必须把 `OUTPUT_ROOT` 设为全新、仓库外路径，再依次运行 `prepare_data.py`、`train.py`、`evaluate.py`、`error_analysis.py`。Exp1 运行方式见 [Exp1](exp1/README.md)，Exp2 见 [Exp2](exp2/README.md)。本轮只做离线核验，没有重训或 GPU 重评。原 requirements 是既有声明；Exp2 实际归档环境与本地轻量检查环境的区别见实验报告。
+Exp1先构建共享成功seed的Rewrite / Control，再分别设置 `OUTPUT_ROOT` 训练；Exp2依次执行候选采样、偏好构造、sanity与恢复检查、正式DPO、val与test评测。完整命令见 [Exp1运行说明](exp1/README.md) 与 [Exp2运行说明](exp2/README.md)。不要对已构建的Exp1数据再次执行 `prepare_data.py`。
 
-## 评分、来源与边界
+Exp2归档环境包括torch2.6.0+cu126、transformers5.12.1、peft0.19.1、trl1.7.1、datasets5.0.1；根requirements中的datasets4.0.0与之不同，不能将其当精确冻结环境。底座revision未锁定、批量与逐题采样轨迹不同，不承诺逐位复现。
 
-`scoring.score` 解析 JSON 后按函数名与 arguments 的集合匹配，忽略调用顺序，也会折叠重复调用；JSON validity 包含原解析器的代码块/片段提取行为，不等价于完整 JSON Schema 合法率。无 LLM judge，无真实工具执行验证。`diagnose` 是启发式错误分类。
+## 结果可信范围
 
-数据源为 [Salesforce/xlam-function-calling-60k](https://huggingface.co/datasets/Salesforce/xlam-function-calling-60k)，来自 [APIGen](https://arxiv.org/abs/2406.18518)。本项目按用户要求不再分发数据及其衍生样本；脱敏不等于获得再分发授权。来源访问和使用条件由使用者自行确认。本仓库继承上游来源与署名，未发现独立的上游 LICENSE 文件，本次不补授代码或数据许可。个人贡献包括源码阅读注释、Exp1/Exp2 实验扩展、恢复检查、离线核验和报告整理；不把上游实现宣称原创。
+- **已核验：** Exp2落盘500条val / test预测重新评分、gold与本地原始数据逐条一致；5000×4候选来源、偏好query组隔离、内容指纹、final与best权重一致性；12组离线检查通过。见 [聚合结果](exp2/reports/results-summary.json) 与 [本地检查](exp2/reports/local-checks.json)。整理与文档更新未重新训练或GPU推理。
+- **输入差异：** Exp1脱敏val零基128、test零基126与原始输入不同，不能宣称各组完全同输入。Exp2归档中的499条 `exp0_reference` 是上游报告，未用于个人500条基线对照。
+- **评分范围：** `scoring.score`解析JSON后比较调用集合，忽略调用顺序并折叠重复调用；JSON有效不等于完整Schema合法或执行成功。没有真实工具执行、LLM judge或官方BFCL成绩。
+- **发布范围：** 公开源码、说明和聚合结论，原始/脱敏数据及衍生样例、凭证、模型和备份保留本地。历史Git提交未改写，当前目录清理不等于清除旧历史。
 
-详细结果：[Exp1 报告](exp1/reports/exp1-results.md)、[Exp2 最终报告](exp2/reports/experiment-report.md)、[Exp2 机器可读证据](exp2/reports/results-summary.json)。
+## 来源与贡献
+
+| 范围 | 来源 / 本仓库工作 |
+|---|---|
+| QLoRA SFT、基础生成与AST评分 | 复用上游实现，保留署名与源码阅读注释 |
+| Exp1 | 教师改写、规则过滤、进度保存、按成功seed构建配对Control、训练结果对照 |
+| Exp2 | 候选采样、偏好构造与分组隔离、双SFT模型DPO、恢复防护、Dev / Test与模型核验 |
+| 实验记录 | 数据/权重指纹、错误分析、失败记录、聚合报告与验证边界 |
+
+数据来自 [Salesforce / xLAM function-calling-60k](https://huggingface.co/datasets/Salesforce/xlam-function-calling-60k)，相关工作为 [APIGen](https://arxiv.org/abs/2406.18518)。使用者须确认来源访问和使用条件；脱敏不构成再分发授权。本仓库不另行授予数据或上游代码许可，不将复用流程宣称原创算法。
